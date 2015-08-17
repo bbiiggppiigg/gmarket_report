@@ -33,7 +33,7 @@ def gen_dict(soup,remainder_count = 0):
 		product_name = item_name_tag.text.replace('\t','').replace('\n','')
 		item_url =  re.search('http://.*(?=\')',item_name_tag.find('a')['href']).group(0)
 		price = int(price_tag.replace(u"￦","").replace(",",""))
-		seller = item.find('ul','seller').text
+		seller = item.find('ul','seller').a.text
 		result[item_url] = (product_name,price,seller)
 	
 	return result
@@ -57,7 +57,13 @@ def fetch_feature(q,keyword):
 			
 			item_count = soup.find(id="sItemCount");
 			print item_count.text
-			item_count =  int(item_count.text.replace(",",""))	
+			try:
+				item_count =  int(item_count.text.replace(",",""))	
+			except Exception , e:
+				print "0 results"
+				q.put(result)
+				return
+				
 			fetch_item_count = item_count 
 			fetch_page_count = fetch_item_count / 500
 			remainder_count = fetch_item_count % 500
@@ -95,6 +101,9 @@ def main():
 		for x in range(len(sys.argv)-1):
 			result.update(q.get())
 
+		if(len(result)==0):
+			print "0 Results";
+			return
 		total_count = len(result)
 		total_price = 0
 		for url in result:
@@ -114,11 +123,17 @@ def main():
 		avg_price = total_price / total_count
 		
 		#print total_price, total_count ,avg_price
-		print "<tr>Average Price is : "+str(avg_price)+" of total "+str(total_count)+" matching products</tr>";
-		print "<tr>Matched seller count is : "+str(len(sellers))+"</tr>"
+		print "<table>"
+		print "<tr><th>Number of Matching Product</th><td>"+str(total_count)+"</td></tr>"
+		print "<tr><th>Average Price</th><td>"+str(avg_price)+"</td> </tr>";
+		print "<tr><th>Number of Matching Seller</th><td>"+str(len(sellers))+"</td></tr>"
+		print "</table>"
 		#print sellers
+		print "<table>"
+		print "<tr><th>Seller ID</th><th>Number of Matching Products</th></tr>"
 		for x in seller_list:
 			print "<tr><td>"+x[0].encode('utf-8')+"</td><td>"+str(len(x[1]))+"</td></tr>"
+		print "</table>"
 	except Exception, e:
 		print e
 
@@ -127,6 +142,6 @@ if __name__=='__main__':
     	print "Usage : <keyword> "
     	sys.exit(-1)
     main() 		
-    call(["pkill", "phantomjs"])
+    #call(["pkill", "phantomjs"])
     print "par_crawler main thread after execution"
     

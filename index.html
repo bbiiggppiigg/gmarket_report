@@ -2,6 +2,12 @@
 <html>
 <head>
   <style>
+#searchbar{
+    width: 50%;
+    margin-left:auto;
+    margin-right: auto;
+}
+
 #search, 
 #submit {
     float: left;
@@ -54,35 +60,89 @@
 #submit::-moz-focus-inner {
        border: 0;  /* Small centering fix for Firefox */
 }
-  </style>
+th{
+    text-align:left;
+}
+table{
+    margin-left:1%;
+}
+
+</style>
+
+
 </head>
 <body>
-	<div>
-	<!--<form id="searchbox">-->
-	    <input id="search" type="text" placeholder="Type here"></input>
-	    <input id="submit" type="submit" value="Search" onclick="query()"></input>
-	<!--</form>-->
-	</div>
-	<br /><br /><br />
-	<div>
-		<table id ="result">
-			<tr> <th>Seller</th> <th># of Matching Products</th></tr>
-		</table>
-	</div>
-	
+
+    <div id="searchbar">
+    <!--<form id="searchbox">-->
+        <h1>Report Generator</h1>
+        <input id="search" type="text" placeholder="Type here"></input>
+        <input id="submit" type="submit" value="Search" onclick="query()"></input>
+        
+    <!--</form>-->
+    </div>
+    
+    <br /><br /><br />
+    
+    <img id='loading' src='712.GIF' hidden />
+    <div id='report_div' hidden>
+        <h2>Report</h2>
+        <table id = "report" cellspacing="10"  border="1" style="width:100%">
+                <tr>
+                    <th>Number of Matching Products</th><td id='num_products'></td>
+                </tr>
+                <tr>
+                     <th>Average Price of Matching Products</th><td id='avg_price'></td>
+                </tr>
+                <tr>
+                     <th>Number of Matching Sellers</th><td id='num_sellers'></td>
+                </tr>
+        </table>
+    </div>
+    
+    <br />
+    <br />
+    
+    <div id="detail_div" hidden>
+        <h2>Details</h2>
+        <table id = "list" hcellspacing="10"  border="1" style="width:100%" >
+            <tr><th>Seller Id</th><th>Product Name</th><th>Product Count</th></tr>
+        </table>
+    </div>
 </body>
 <script type="text/javascript">
-	function query(){
-		//console.log("HI");
-		document.getElementById("result").innerHTML=""
-		var ws = new WebSocket("ws://127.0.0.1:8080/websocket");
-	    ws.onopen = function() {
-	        ws.send(document.getElementById("search").value);
-	    };
-	    ws.onmessage = function (evt) {
-	       document.getElementById("result").innerHTML += event.data + "<br>";
-	    };	
-	}
+    function query(){
+        //console.log("HI");
+        document.getElementById("report_div").hidden=true;
+        document.getElementById("detail_div").hidden=true;
+        document.getElementById("list").innerHTML="<tr><th>Seller Id</th><th>Product Name</th><th>Product Count</th></tr>";
+        var ws = new WebSocket("ws://127.0.0.1:8080/echo");
+        ws.onopen = function() {
+            ws.send(document.getElementById("search").value);
+            console.log("Sent!!!!!!!");
+            document.getElementById("loading").hidden=false;
+        };
+        ws.onmessage = function (evt) {
+            document.getElementById("loading").hidden=true;
+            console.log(evt)
+           //document.getElementById("results").innerHTML += event.data;
+            var obj = JSON.parse(event.data);
+            document.getElementById("avg_price").innerHTML=obj.avg_price+"₩";
+            document.getElementById("num_products").innerHTML=obj.num_products;
+            document.getElementById("num_sellers").innerHTML=obj.num_sellers;
+            document.getElementById("report_div").hidden=false;
+            for (seller_id in obj.seller_list){
+                document.getElementById("list").innerHTML+="<tr bgcolor='#99ffcc'><td>"+obj.seller_list[seller_id][0]+"</td><td><a href='"+obj.seller_list[seller_id][1][0][1]+"'>"+obj.seller_list[seller_id][1][0][0]+"</a></td><td>"+obj.seller_list[seller_id][1].length+"</td></tr>";
+                for (pid =1 ; pid < obj.seller_list[seller_id][1].length; pid++){
+                    //console.log(pid+" "+obj.seller_list[seller_id][1][pid]);
+                    document.getElementById("list").innerHTML+="<tr><td></td><td><a href='"+obj.seller_list[seller_id][1][pid][1]+"'>"+obj.seller_list[seller_id][1][pid][0]+"</a></td><td></td></tr>";
+                }
+                //console.log(seller_id+" "+obj.seller_list[seller_id]);
+            
+            }
+            document.getElementById("detail_div").hidden=false;
+        };
+    }
     
   </script>
 </html>
